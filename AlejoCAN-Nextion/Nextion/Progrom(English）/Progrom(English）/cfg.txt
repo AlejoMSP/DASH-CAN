@@ -1,0 +1,1 @@
+2000000,正常模式,标准帧,1M,CAN_BS1_6tq,CAN_BS2_5tq,3,1000.000kbps,00000000,00000000,Manual BPS FALSE,SendAlways,Variable,
