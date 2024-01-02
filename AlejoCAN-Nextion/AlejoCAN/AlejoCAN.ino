@@ -1,10 +1,15 @@
 
+#include <SPI.h>
 //GPS
 #include <TinyGPSPlus.h>
 
 // CAN receiving
-#include <SPI.h>
 #include <mcp2515.h>
+
+//EGT
+#define MAX6675_CS   50
+#define MAX6675_SO   52
+#define MAX6675_SCK  48
 
 struct can_frame canMsg;
 struct can_frame canMsg1;
@@ -13,6 +18,7 @@ MCP2515 mcp2515(9);  // SPI CS Pin 9
 // The TinyGPSPlus object
 TinyGPSPlus gps;
 //int cantxValue = 0;
+int SPEED; //GPS Variables
 
 // megasquirt variables
 int MAP, RPM, TPS, CLT, BATT, BARO, MAT, EGO1, EGO2, EGOC, FUELP, OILP, OILT, KNOCK, ETH, VVT, VSS1, SENSORS1, SENSORS2, SENSORS3, SENSORS4, SENSORS5, SENSORS6, SENSORS7, SENSORS8, SENSORS9, SENSORS10, SENSORS11, SENSORS12, SENSORS13, SENSORS14, SENSORS15, SENSORS16;
@@ -24,7 +30,7 @@ int delayPeriod = 1000;
 
 void setup() {
   // Serial INIT
-  //Serial.begin(115200); //Send CAN Data to MS3
+  Serial.begin(115200); //Send CAN Data to Serial Monitor
   Serial1.begin(115200); //Nextion Screen
   Serial2.begin(115200); //GPS
 
@@ -281,10 +287,10 @@ while (Serial2.available() > 0) // Read GPS ninfo
       KNOCK = -999;  //Fake data to test gauge even if data is being received
       ETH = -999; //Fake data to test gauge even if data is being received
       VVT = -999; //Fake data to test gauge even if data is being received
+      SPEED = -999; //Fake data to test gauge even if data is being received
     }
-  } 
+  }    
 
-   
     //Serial1.print(F("page: main."));
     Serial1.print(F("rpm.txt=\""));
     Serial1.print(RPM);
@@ -350,19 +356,57 @@ while (Serial2.available() > 0) // Read GPS ninfo
     Serial1.print(F("\""));
     Serial1.write(0xff); Serial1.write(0xff); Serial1.write(0xff);   
 
-    Serial1.print(F("hum.txt=\"999"));
+    //Serial1.print(F("hum.txt=\"999"));
     //Serial1.println(h);
-    Serial1.print(F("\""));
-    Serial1.write(0xff); Serial1.write(0xff); Serial1.write(0xff);     
+    //Serial1.print(F("\""));
+    //Serial1.write(0xff); Serial1.write(0xff); Serial1.write(0xff);     
     
-    Serial1.print(F("temp.txt=\"999"));
+    //Serial1.print(F("temp.txt=\"999"));
     //Serial1.println(tf);
-    Serial1.print(F("\""));
-    Serial1.write(0xff); Serial1.write(0xff); Serial1.write(0xff);     
+    //Serial1.print(F("\""));
+    //Serial1.write(0xff); Serial1.write(0xff); Serial1.write(0xff);     
     
     Serial1.print(F("mph.txt=\""));
     Serial1.println(speed);
     Serial1.print(F("\""));
-    Serial1.write(0xff); Serial1.write(0xff); Serial1.write(0xff);     
-    
+    Serial1.write(0xff); Serial1.write(0xff); Serial1.write(0xff);  
+
+    //EGT    
+    Serial.print(readThermocouple());
+    Serial.println('c');
+    delay(1500);
+}
+
+double readThermocouple() {
+
+  uint16_t v;
+  pinMode(MAX6675_CS, OUTPUT);
+  pinMode(MAX6675_SO, INPUT);
+  pinMode(MAX6675_SCK, OUTPUT);
+  
+  digitalWrite(MAX6675_CS, LOW);
+  delay(1);
+
+  // Read in 16 bits,
+  //  15    = 0 always
+  //  14..2 = 0.25 degree counts MSB First
+  //  2     = 1 if thermocouple is open circuit  
+  //  1..0  = uninteresting status
+  
+  v = shiftIn(MAX6675_SO, MAX6675_SCK, MSBFIRST);
+  v <<= 8;
+  v |= shiftIn(MAX6675_SO, MAX6675_SCK, MSBFIRST);
+  
+  digitalWrite(MAX6675_CS, HIGH);
+  if (v & 0x4) 
+  {    
+    // Bit 2 indicates if the thermocouple is disconnected
+    return NAN;     
+  }
+
+  // The lower three bits (0,1,2) are discarded status bits
+  v >>= 3;
+
+  // The remaining bits are the number of 0.25 degree (C) counts
+  return v*0.25;
 }
