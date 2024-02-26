@@ -372,9 +372,9 @@ while (Serial2.available() > 0) // Read GPS ninfo
     Serial1.write(0xff); Serial1.write(0xff); Serial1.write(0xff);  
 
     //EGT    
-    Serial.print(readThermocouple());
-    Serial.println('c');
-    delay(1500);
+//    Serial.print(readThermocouple());
+//    Serial.println('c');
+//    delay(1500);
 }
 
 double readThermocouple() {
